@@ -1,0 +1,53 @@
+# data collected from https://catalog.data.gov/dataset/baby-names-from-social-security-card-applications-national-level-data
+# came in a package of 100+ text files.  I consolidated all of them into one data file using R so that i could then import it into 
+# Tableau.
+
+library (readtext)
+library (data.table)
+library (foreign)
+library (tidyverse)
+
+getwd()
+list_of_files <- list.files(path = 'C:/Users/jacob/Documents/gov name data 2',
+                            recursive = TRUE, pattern = '\\.txt$', full.names = TRUE)
+
+list_of_files
+
+DT <- rbindlist(sapply(list_of_files, fread, simplify = FALSE),
+                use.names = TRUE, idcol = "FileName")
+
+str(DT)
+
+# function to iterate through every text file in the directory.
+yearExtract <- function(string) {
+  t <- regmatches(string, regexec("[0-9]{4}", string))
+  sapply(t, function(x) {
+    if(length(x) > 0){
+      return(as.numeric(x))
+    } else {
+      return(NA)    
+    }
+  })
+}
+
+DT$Year <- yearExtract(DT$FileName)
+DT
+
+colnames(DT)[colnames(DT)=='V1'] <- 'Name'
+colnames(DT)[colnames(DT)=='V2'] <- 'Sex'
+colnames(DT)[colnames(DT)=='V3'] <- 'Occurrences'
+
+DT <- DT %>%
+  select(-FileName)
+str(DT)
+
+Females <- DT %>%
+  filter(Sex == 'F')
+Females
+
+Males <- DT %>%
+  filter(Sex == 'M')
+
+write.csv(DT, 'GovNameData.csv')
+write.csv(Females, 'GovNameDataF.csv')
+write.csv(Males, 'GovNameDataM.csv')
