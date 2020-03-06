@@ -1,0 +1,39 @@
+library(lubridate)
+library(tidyverse)
+library(RMySQL)
+
+library(httr)
+library(RCurl)
+
+db <- dbConnect(dbDriver('MySQL'), dbname = 'coronavirus', user = 'root', password = 'password')
+today <- Sys.Date()
+yesterday <- Sys.Date() - 1
+
+today <- format(today, "%m-%d-%Y")
+yesterday <- format(yesterday, "%m-%d-%Y")
+
+# Data via John Hopkins University Public github domain.
+# today's url file (if available)
+urlfile = paste(
+  "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/",
+  today, ".csv", sep = "")
+
+# yesterday's url file (if necessary)
+urlfile = paste(
+  "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/",
+  yesterday, ".csv", sep = "")
+
+# Reading and editing the data
+mydata<-read_csv(url(urlfile))
+mydata <- mydata %>%
+  mutate(`Death Rate` = Deaths / Confirmed)
+
+# exporting into MySQL
+dbRemoveTable(db, 'dailydata')
+for(i in 1:nrow(mydata)){
+  currentLine <- as.data.frame(mydata[i,])
+  currentLine <- currentLine
+  dbWriteTable(con = db, value = currentLine, name = paste0("dailydata"), append = TRUE, overwrite = FALSE)
+  message(i)
+}
+
